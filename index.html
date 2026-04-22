@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>智慧北京 - 城市数据可视化平台</title>
+    <!-- ArcGIS Maps SDK for JavaScript 5.0 -->
+    <link rel="stylesheet" href="https://js.arcgis.com/5.0/esri/themes/light/main.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Microsoft YaHei', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: #f0f2f5;
+        }
+
+        /* ========= 页眉区域 ========= */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 0 24px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 100;
+            position: relative;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            background: rgba(255,255,255,0.15);
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+
+        .title h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .title p {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0 15px;
+            border-left: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-number {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        .badge {
+            background: rgba(78, 205, 196, 0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(78, 205, 196, 0.5);
+        }
+
+        /* ========= 主体布局 ========= */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        /* ========= 地图区域 ========= */
+        .map-area {
+            flex: 3;
+            position: relative;
+            background: #e8edf2;
+        }
+
+        #viewDiv {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 图层列表 - 悬浮在地图右上角 */
+        .layerlist-wrapper {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 280px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            z-index: 10;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .layerlist-header {
+            background: linear-gradient(135deg, #2c3e50, #1a1a2e);
+            color: white;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .layerlist-header i {
+            font-size: 1.1rem;
+        }
+
+        #layerListDiv {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        /* 自定义图层列表样式 */
+        .esri-layer-list__item {
+            padding: 10px 16px !important;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* ========= 底图库区域 ========= */
+        .basemap-area {
+            width: 320px;
+            background: white;
+            border-left: 1px solid #e0e4e8;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 15px rgba(0,0,0,0.05);
+        }
+
+        .basemap-header {
+            padding: 16px 18px;
+            background: #f8f9fc;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .basemap-header h3 {
+            font-size: 1rem;
+            color: #1a1a2e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .basemap-header p {
+            font-size: 0.7rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        #basemapGalleryDiv {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* 底图库网格样式 */
+        .esri-basemap-gallery {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .esri-basemap-gallery__item {
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .esri-basemap-gallery__item:hover {
+            transform: translateY(-2px);
+        }
+
+        .esri-basemap-gallery__item--selected {
+            border-color: #4ecdc4;
+            box-shadow: 0 4px 12px rgba(78,205,196,0.3);
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c9d2;
+            border-radius: 3px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 800px) {
+            .basemap-area { width: 260px; }
+            .layerlist-wrapper { width: 240px; }
+            .stat-item { display: none; }
+            .header-stats .badge { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========= 页眉区域 ========= -->
+    <header class="header">
+        <div class="logo-area">
+            <div class="logo-icon">🏙️</div>
+            <div class="title">
+                <h1>智慧北京 · 城市数据可视化平台</h1>
+                <p>Smart Beijing · Urban Data Visualization Platform</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item">
+                <div class="stat-number">1500+</div>
+                <div class="stat-label">兴趣点数据</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">12</div>
+                <div class="stat-label">图层类型</div>
+            </div>
+            <div class="badge">基于 ArcGIS Maps SDK 5.0</div>
+        </div>
+    </header>
+
+    <!-- ========= 主体：地图区 + 底图库区 ========= -->
+    <div class="main-container">
+        <!-- 地图区域 -->
+        <div class="map-area">
+            <div id="viewDiv"></div>
+            <!-- 图层列表容器 -->
+            <div class="layerlist-wrapper">
+                <div class="layerlist-header">
+                    <span>📋</span> 图层控制
+                </div>
+                <div id="layerListDiv"></div>
+            </div>
+        </div>
+
+        <!-- 底图库区域 -->
+        <div class="basemap-area">
+            <div class="basemap-header">
+                <h3>🗺️ 底图库</h3>
+                <p>点击切换地图样式</p>
+            </div>
+            <div id="basemapGalleryDiv"></div>
+        </div>
+    </div>
+
+    <script src="https://js.arcgis.com/5.0/"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
