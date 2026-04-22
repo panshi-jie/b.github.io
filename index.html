@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>智慧北京 - 城市数据可视化平台</title>
     <!-- ArcGIS Maps SDK for JavaScript 5.0 -->
-    <link rel="stylesheet" href="https://js.arcgis.com/5.0/esri/themes/light/main.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/5.0/css/arcgis.css">
     <style>
         * {
             margin: 0;
@@ -280,7 +280,7 @@
         </div>
     </div>
 
-    <script src="https://js.arcgis.com/5.0/"></script>
-    <script type="module" src="js/main.js"></script>
+    <!-- ✅ 我修复的关键位置：路径 + 模块类型 -->
+    <script type="module" src="app.js"></script>
 </body>
 </html>
