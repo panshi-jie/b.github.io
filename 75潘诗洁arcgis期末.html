@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>京杭大运河 · 粮食漂流记 | 漕运史诗 · 动态叙事地图</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Serif SC', serif;
+            overflow: hidden;
+            height: 100vh;
+            background: #f4efe6;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        /* 主标题 */
+        .master-title {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 20;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(12px);
+            padding: 12px 28px;
+            border-radius: 48px;
+            border-left: 8px solid #d4af37;
+            pointer-events: none;
+            color: #fff6e5;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .master-title h1 {
+            font-size: 1.6rem;
+            letter-spacing: 2px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .master-title h1 i { color: #e7b42c; font-size: 1.8rem; }
+        .master-title p { font-size: 0.75rem; opacity: 0.85; margin-top: 5px; }
+
+        /* 故事卡片 */
+        .story-card {
+            position: absolute;
+            top: 110px;
+            right: 28px;
+            width: 360px;
+            max-width: calc(100% - 56px);
+            background: rgba(25, 22, 18, 0.92);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 22px 26px;
+            color: #fef3e0;
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            box-shadow: 0 20px 35px -8px black;
+            z-index: 20;
+            pointer-events: auto;
+            transition: 0.25s;
+        }
+        .story-card h3 {
+            font-weight: 700;
+            font-size: 1.4rem;
+            border-left: 5px solid #d4af37;
+            padding-left: 15px;
+            margin-bottom: 12px;
+        }
+        .story-card .era-badge {
+            display: inline-block;
+            background: rgba(212, 175, 55, 0.2);
+            border: 1px solid #d4af37;
+            border-radius: 40px;
+            padding: 5px 16px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 12px 0;
+        }
+        .story-card p { font-size: 0.88rem; line-height: 1.55; margin: 12px 0; }
+        .close-card {
+            position: absolute;
+            top: 18px;
+            right: 22px;
+            cursor: pointer;
+            opacity: 0.65;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        .close-card:hover { opacity: 1; }
+
+        /* 时间轴 */
+        .timeline-dynasty {
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(16px);
+            border-radius: 60px;
+            padding: 8px 28px;
+            display: flex;
+            gap: 18px;
+            z-index: 20;
+            border: 1px solid #dbb463;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            pointer-events: auto;
+        }
+        .dynasty-btn {
+            background: none;
+            border: none;
+            color: #eedba7;
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 8px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 1px;
+        }
+        .dynasty-btn i { margin-right: 8px; font-size: 1rem; }
+        .dynasty-btn.active {
+            background: #d4af37;
+            color: #221f1a;
+            box-shadow: 0 0 14px rgba(212,175,55,0.8);
+        }
+        .dynasty-btn:hover:not(.active) { background: #4e3b2c; color: #fff1cf; }
+        .map-footer {
+            position: absolute;
+            bottom: 18px;
+            right: 22px;
+            font-size: 10px;
+            color: #ddd2be;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 12px;
+            border-radius: 24px;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+        }
+        .layer-tip {
+            position: absolute;
+            bottom: 110px;
+            left: 24px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 32px;
+            padding: 6px 16px;
+            font-size: 0.7rem;
+            color: #fff0c0;
+            z-index: 20;
+            pointer-events: none;
+        }
+        /* 弹窗 */
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #fffefa;
+            border-radius: 28px;
+            border-left: 10px solid #c28a3b;
+            font-family: 'Inter', sans-serif;
+            color: #2c241a;
+            box-shadow: 0 18px 32px rgba(0,0,0,0.2);
+            max-width: 320px;
+        }
+        .custom-popup .leaflet-popup-content {
+            margin: 16px 20px;
+            min-width: 260px;
+        }
+        .popup-title {
+            font-weight: 800;
+            font-size: 1.15rem;
+            border-bottom: 2px solid #e2ca9a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .popup-img {
+            max-height: 140px;
+            border-radius: 20px;
+            margin: 12px 0;
+            width: 100%;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            background: #e9e2d0;
+            display: block;
+            visibility: visible;
+        }
+        .data-badge {
+            background: #e7dbbc;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            display: inline-block;
+            margin: 4px 0;
+        }
+        .audio-sim {
+            background: #e0cfaa;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 36px;
+            font-size: 0.7rem;
+            margin-top: 12px;
+            cursor: pointer;
+            transition: 0.1s;
+            color: #2c241a;
+            font-weight: 700;
+        }
+        .city-glow-marker {
+            background: #c2823a;
+            border-radius: 40px;
+            border: 2px solid #ffe0a3;
+            padding: 6px 16px;
+            font-weight: 800;
+            font-size: 14px;
+            white-space: nowrap;
+            box-shadow: 0 0 16px rgba(0,0,0,0.5);
+            color: #fff3dd;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Noto Serif SC', serif;
+        }
+        @media (max-width: 700px) {
+            .timeline-dynasty { padding: 5px 12px; gap: 6px; bottom: 18px; }
+            .dynasty-btn { padding: 4px 12px; font-size: 0.7rem; }
+            .story-card { width: 280px; top: 85px; right: 12px; padding: 16px; }
+            .master-title h1 { font-size: 1.1rem; }
+            .master-title { padding: 6px 18px; top: 12px; left: 12px; }
+            .city-glow-marker { font-size: 10px; padding: 3px 10px; }
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="master-title">
+    <h1><i class="fas fa-dragon"></i> 京杭大运河 · 粮食漂流记 <i class="fas fa-rice"></i></h1>
+    <p>从帝国漕运命脉到世界文化遗产 | 隋唐 → 明清 → 近现代 → 当代</p>
+</div>
+
+<!-- ✅ 已插入视频的运河史诗卡片 -->
+<div class="story-card" id="storyCard">
+    <div class="close-card" onclick="document.getElementById('storyCard').style.display='none'">✕</div>
+    <h3><i class="fas fa-water"></i> 运河史诗</h3>
+    <div class="era-badge" id="eraBadge">🏮 隋唐 · 帝国生命线</div>
+    <div id="dynamicStory">
+        <!-- 视频已嵌入，完美匹配你的内容 -->
+        <iframe src="https://player.bilibili.com/player.html?aid=950892148421112553&cid=765243213&page=1"
+                style="width:100%; height:180px; border-radius:16px; border:none; margin-bottom:10px;"
+                allowfullscreen></iframe>
+
+        <p>🌾 一条河，串联6省，奔流1400年。<br>
+        📌 点击下方【朝代按钮】，地图将自动缩放&漫游，切换不同时代图层。<br>
+        ✨ 点击地图上【高亮标记】→ 查看实景照片、漕运数据、非遗故事。</p>
+    </div>
+</div>
+
+<div class="timeline-dynasty">
+    <button class="dynasty-btn active" data-era="suitang"><i class="fas fa-landmark"></i> 隋唐 · 洛阳中心</button>
+    <button class="dynasty-btn" data-era="mingqing"><i class="fas fa-crown"></i> 明清 · 北京命脉</button>
+    <button class="dynasty-btn" data-era="modern"><i class="fas fa-train"></i> 近现代 · 漕运落幕</button>
+    <button class="dynasty-btn" data-era="contemporary"><i class="fas fa-leaf"></i> 当代 · 文化遗产</button>
+</div>
+<div class="map-footer"><i class="fas fa-map-marked-alt"></i> 高德中文地图 · 大运河全图</div>
+<div class="layer-tip"><i class="fas fa-layer-group"></i> 图层随时代切换 | 点击任意标记 → 打开多媒体弹窗</div>
+
+<script>
+    // 高德中文干净底图
+    const gaodeNormal = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: ['1','2','3','4'],
+        attribution: '&copy; <a href="https://www.amap.com">高德地图</a>',
+        maxZoom: 14,
+        minZoom: 5
+    });
+    const map = L.map('map').setView([34.5, 114.5], 6.2);
+    gaodeNormal.addTo(map);
+
+    // 全局变量
+    let currentMarkers = [];
+    let currentLines = [];
+
+    function clearAllFeatures() {
+        currentMarkers.forEach(m => map.removeLayer(m));
+        currentLines.forEach(l => map.removeLayer(l));
+        currentMarkers = [];
+        currentLines = [];
+    }
+
+    function addLine(latlngs, color, weight, dash = null, opacity = 0.9) {
+        const line = L.polyline(latlngs, { color, weight, opacity, dashArray: dash, smoothFactor: 1.2 });
+        line.addTo(map);
+        currentLines.push(line);
+        return line;
+    }
+
+    // 城市标记（弹窗含真实运河照片+简介）
+    function addCitySpot(lat, lng, cityName, subtitle, imgUrl, description) {
+        const iconHtml = `<div class="city-glow-marker"><i class="fas fa-map-pin"></i> ${cityName} ${subtitle}</div>`;
+        const icon = L.divIcon({ html: iconHtml, iconSize: [130, 36], className: 'city-spot', popupAnchor: [0, -18] });
+        const marker = L.marker([lat, lng], { icon }).addTo(map);
+        const popHtml = `<div class="popup-title"><i class="fas fa-city"></i> ${cityName}</div>
+                         <img src="${imgUrl}" class="popup-img" alt="${cityName}" onerror="this.style.display='none'">
+                         <div><span class="data-badge">📍 ${subtitle}</span></div>
+                         <p style="margin-top: 8px; font-size:0.82rem;">${description}</p>`;
+        marker.bindPopup(popHtml, { className: 'custom-popup', maxWidth: 310 });
+        currentMarkers.push(marker);
+        return marker;
+    }
+
+    // 特色遗产点
+    function addFeature(lat, lng, title, imgUrl, infoHtml, iconColor = '#d9943b') {
+        const iconDiv = `<div style="background:${iconColor}; width:42px; height:42px; border-radius:50%; border:3px solid #ffefb9; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 12px black;"><i class="fas fa-warehouse" style="color:#2c241a; font-size:20px;"></i></div>`;
+        const customIcon = L.divIcon({ html: iconDiv, iconSize: [42,42], className: 'feat-marker' });
+        const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+        marker.bindPopup(`<div class="popup-title"><i class="fas fa-scroll"></i> ${title}</div><img src="${imgUrl}" class="popup-img" onerror="this.style.display='none'">${infoHtml}`, { className: 'custom-popup' });
+        currentMarkers.push(marker);
+        return marker;
+    }
+
+    // 真实运河图片库
+    const imgPool = {
+        luoyang: "https://panshi-jie.github.io/b.github.io/洛阳图片.jpg",
+        yangzhou: "https://panshi-jie.github.io/b.github.io/扬州图片.jpg",
+        hangzhou: "https://panshi-jie.github.io/b.github.io/杭州图片.jpg",
+        beijing: "https://panshi-jie.github.io/b.github.io/北京图片.jpg",
+        jining: "https://panshi-jie.github.io/b.github.io/济宁.jpg",
+        suzhou: "https://panshi-jie.github.io/b.github.io/苏州.jpg",
+        tianjin: "https://panshi-jie.github.io/b.github.io/天津.jpg",
+        tongzhou: "https://panshi-jie.github.io/b.github.io/通州.jpg",
+        hanjiacang: "https://panshi-jie.github.io/b.github.io/hanjiacang.jpg",
+        luokou: "https://panshi-jie.github.io/b.github.io/洛口仓.png",
+    };
+
+    // ===================== 1. 隋唐 · 洛阳中心 =====================
+    function eraSuiTang() {
+        clearAllFeatures();
+        map.flyTo([34.62, 112.45], 7.6, { duration: 1.2 });
+        document.getElementById('dynamicStory').innerHTML = `
+        <iframe src="https://panshi-jie.github.io/b.github.io/京杭大运河.mp4"
+                style="width:100%; height:180px; border-radius:16px; border:none; margin-bottom:10px;"
+                allowfullscreen></iframe>
+        <p>🏮 隋唐 · 帝国生命线<br>“漕运四百万石，天下粮仓为基”<br>以洛阳为中心，含嘉仓、洛口仓撑起帝国心脏。每年漕船六千艘，粮食沿汴渠、通济渠源源北上。</p>`;
+        document.getElementById('eraBadge').innerHTML = '🏮 隋唐 · 国家动脉 | 漕运鼎盛';
+        addLine([[34.62,112.45],[34.85,113.5],[35.2,114.1],[36.1,115.4],[39.9,116.4]], '#bc7a34', 4);
+        addLine([[34.62,112.45],[33.6,113.9],[32.4,119.4],[31.3,120.6],[30.27,120.15]], '#a86a2a', 4);
+        addCitySpot(34.62, 112.45, '洛阳', '隋唐东都', imgPool.luoyang, '大运河中枢，含嘉仓被称为“天下第一粮仓”，年转运粮食占全国半数，帝国命脉所系。');
+        addCitySpot(32.39, 119.41, '扬州', '漕运咽喉', imgPool.yangzhou, '唐代盐铁转运使驻地，年转运粮食600万石，商贾云集，有“扬一益二”之称。');
+        addCitySpot(30.27, 120.15, '杭州', '江南起点', imgPool.hangzhou, '隋代大运河南端，江南稻米、丝绸汇集，开启“苏湖熟天下足”的序幕。');
+        addCitySpot(39.90, 116.40, '北京', '涿郡蓟城', imgPool.beijing, '隋唐北征粮道终点，为后世定都奠定基础，永济渠直通此地。');
+        addFeature(34.65, 112.58, '含嘉仓', imgPool.hanjiacang, `<div><span class="data-badge">📦 储粮580万石</span><p>唐代最大官仓，地下仓窖排列整齐，遗址入选世界遗产。</p><div class="audio-sim" onclick="alert('🎵 隋唐漕运号子：嘿咻～ 拉粮入仓，国运昌隆！')"><i class="fas fa-drumstick-bite"></i> 古运河号子·模拟</div></div>`, '#cb873a');
+        addFeature(34.72, 113.03, '洛口仓', imgPool.luokou, `<div><span class="data-badge">📈 储量约2400万石</span><p>隋大业年间核心枢纽，天下粮仓之首，筑城置仓，规模宏大。</p></div>`, '#bc762f');
+    }
+
+    // ===================== 2. 明清 · 北京命脉 =====================
+    function eraMingQing() {
+        clearAllFeatures();
+        map.flyTo([39.9042, 116.4074], 7.4, { duration: 1.2 });
+        document.getElementById('dynamicStory').innerHTML = `
+        <p>🏯 明清 · 京师命脉，天下转漕<br>北京为终点，每年400万石漕粮抵京，盐运、丝绸贸易极盛。运河两岸钞关林立，货物从纯粮食转变为盐、丝绸、茶叶、瓷器。</p>`;
+        document.getElementById('eraBadge').innerHTML = '🏯 明清 · 京师命脉 | 盐运黄金时代';
+        const saltRoad = [[32.39,119.41],[33.58,119.02],[34.58,118.78],[35.40,116.57],[36.96,115.96],[39.13,117.20]];
+        addLine(saltRoad, '#d99444', 5, '5,6');
+        addLine([[39.90,116.40],[36.96,115.96],[35.4,116.57],[32.39,119.41],[31.3,120.6],[30.27,120.15]], '#b05f2c', 3);
+        addCitySpot(39.91, 116.66, '通州', '京畿漕运终点', imgPool.tongzhou, '明清漕粮抵达第一站，设坐粮厅，年收漕粮300万石，粮仓栉比。');
+        addCitySpot(39.13, 117.20, '天津', '长芦盐运中心', imgPool.tianjin, '盐粮转运枢纽，长芦盐场经运河北上，支撑国库岁入。');
+        addCitySpot(35.40, 116.57, '济宁', '运河之都', imgPool.jining, '河道总督衙门驻地，会通河关键点，商贾云集，有“江北苏州”之誉。');
+        addCitySpot(32.39, 119.41, '扬州', '盐运商埠', imgPool.yangzhou, '两淮盐商富可敌国，盐引占全国40%，奢侈文化影响深远。');
+        addCitySpot(31.30, 120.60, '苏州', '江南粮帛中心', imgPool.suzhou, '枫桥米市、丝绸之府，年运绸缎数万匹，粮食数百万石。');
+    }
+
+    // ===================== 3. 近现代·漕运落幕 =====================
+    function eraModern() {
+        clearAllFeatures();
+        map.flyTo([35.2, 115.5], 6.8, { duration: 1.2 });
+        document.getElementById('dynamicStory').innerHTML = `
+        <p>🚂 近现代 · 漕运废止，铁路崛起<br>1901年清廷停漕，津浦铁路通车，运河风光不再。但民间船运延续，船工号子成为劳动者的最后回响。</p>`;
+        document.getElementById('eraBadge').innerHTML = '🚂 近现代 · 转型阵痛 | 民间记忆';
+        addLine([[39.90,116.40],[36.66,117.02],[34.75,117.0],[32.39,119.41]], '#705e4d', 3, '12,8');
+        addCitySpot(35.40, 116.57, '济宁', '近代码头', imgPool.jining, '民国时期小火轮拖运煤炭、杂粮，老照片里纤夫身影渐远。');
+        addCitySpot(31.30, 120.60, '苏州', '水运余晖', imgPool.suzhou, '沪宁铁路通车冲击内河航运，但水运仍是城乡物资纽带。');
+    }
+
+    // ===================== 4. 当代 · 文化遗产黄金水道 =====================
+    function eraContemporary() {
+        clearAllFeatures();
+        map.flyTo([34.8, 117.2], 7.1, { duration: 1.2 });
+        document.getElementById('dynamicStory').innerHTML = `
+        <p>🌟 当代 · 世界文化遗产 + 经济动脉<br>2014年入列世界遗产，南水北调东线贯通，年货运量超3.5亿吨。非遗船工号子再现，运河文化节、旅游热潮让千年水道重焕新生。</p>`;
+        document.getElementById('eraBadge').innerHTML = '🌟 当代 · 文化焕新 | 黄金水道';
+        addLine([[34.9,117.1],[34.2,118.3],[32.4,119.4],[31.8,120.2],[31.3,120.6]], '#3f9a6b', 4);
+        addLine([[35.40,116.57],[36.96,115.96],[39.13,117.20]], '#479f6c', 3);
+        addCitySpot(35.40, 116.57, '济宁', '运河文化节', imgPool.jining, '每年举办“运河之都”非遗展，船工号子传承人现场演唱，游客沉浸体验。');
+        addCitySpot(31.30, 120.60, '苏州', '古运河夜游', imgPool.suzhou, '盘门、山塘河夜游线，评弹与光影秀，年接待游客超300万人次。');
+        addCitySpot(32.39, 119.41, '扬州', '中国大运河博物馆', imgPool.yangzhou, '全流域数字化展陈，沙飞船与漕运历史，成为文化新地标。');
+        addCitySpot(30.27, 120.15, '杭州', '拱宸桥历史街区', imgPool.hangzhou, '世界遗产点，桥西街区活态传承，非遗手工艺汇聚。');
+    }
+
+    // 大运河整体轮廓
+    function initCanalOutline() {
+        const outline = [[39.90,116.40],[39.13,117.20],[36.96,115.96],[35.40,116.57],[34.62,112.45],[32.39,119.41],[31.30,120.60],[30.27,120.15]];
+        const bg = L.polyline(outline, { color: '#dba958', weight: 2.2, opacity: 0.45, dashArray: '8,6' });
+        bg.addTo(map);
+        currentLines.push(bg);
+    }
+
+    // 绑定时间轴
+    function bindEraButtons() {
+        const btns = document.querySelectorAll('.dynasty-btn');
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const era = btn.dataset.era;
+                if(era === 'suitang') eraSuiTang();
+                else if(era === 'mingqing') eraMingQing();
+                else if(era === 'modern') eraModern();
+                else if(era === 'contemporary') eraContemporary();
+                const card = document.getElementById('storyCard');
+                if(card.style.display === 'none') card.style.display = 'block';
+            });
+        });
+    }
+
+    initCanalOutline();
+    eraSuiTang();
+    bindEraButtons();
+    map.invalidateSize();
+</script>
+</body>
+</html>
